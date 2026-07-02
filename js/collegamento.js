@@ -1,5 +1,5 @@
 /* ============================================================
-   LOGICA GCS E WEBSOCKET
+   GCS AND WEBSOCKET LOGIC
    ============================================================ */
 const GCS = (() => {
     let ws = null;
@@ -10,7 +10,7 @@ const GCS = (() => {
             d.className = 'status-dot ' + (online ? 'online' : 'offline');
         });
         document.querySelectorAll('.status-text').forEach(el => {
-            el.textContent = online ? 'ONLINE — Connesso' : 'OFFLINE — Disconnesso';
+            el.textContent = online ? 'ONLINE — Connected' : 'OFFLINE — Disconnected';
             el.style.color = online ? 'var(--green)' : 'var(--red)';
         });
         sessionStorage.setItem('gcs_online', online ? '1' : '0');
@@ -24,6 +24,12 @@ const GCS = (() => {
         d.innerHTML = html;
         terminal.appendChild(d);
         terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // NEW: Function to clear the terminal log
+    function clearTerminal() {
+        if (!terminal) terminal = document.getElementById('terminal');
+        if (terminal) terminal.innerHTML = '<div class="msg" style="color:var(--text-muted); font-style:italic;">Log cleared.</div>';
     }
 
     function updateHUDFromTelemetry(msg) {
@@ -46,6 +52,22 @@ const GCS = (() => {
         if(spdMatch && document.getElementById('hud-speed')) {
             document.getElementById('hud-speed').textContent = `SPD: ${spdMatch[1]} km/h`;
         }
+
+        // ADDED: GPS coordinates extraction and sending to the Map!
+        let gpsMatch = msg.match(/(?:GPS)[:=]\s*([0-9.-]+),\s*([0-9.-]+)/i);
+        if(gpsMatch && document.getElementById('hud-gps')) {
+            let currentLat = parseFloat(gpsMatch[1]);
+            let currentLon = parseFloat(gpsMatch[2]);
+            
+            // 1. Show 7 decimals to see micro-movements (8 centimeters per click)
+            document.getElementById('hud-gps').textContent = `GPS: ${currentLat.toFixed(7)}, ${currentLon.toFixed(7)}`;
+
+            // 2. Pass the coordinates secretly through the iframe walls to Adam!
+            const mapIframe = document.querySelector('#map-tab iframe');
+            if(mapIframe && mapIframe.contentWindow) {
+                mapIframe.contentWindow.postMessage({ type: 'DRONE_LIVE_POS', lat: currentLat, lon: currentLon }, '*');
+            }
+        }
     }
 
     function initWebSocket(onReady) {
@@ -57,14 +79,14 @@ const GCS = (() => {
         ws = new WebSocket('ws://localhost:8000/ws');
 
         ws.onopen = () => {
-            log('<span class="sys">[WS] Canale aperto verso il gateway locale.</span>', 'sys');
+            log('<span class="sys">[WS] Channel open to local gateway.</span>', 'sys');
             if (onReady) onReady();
         };
 
         ws.onmessage = (event) => {
             const msgStr = typeof event.data === 'string' ? event.data : '';
 
-            // 1. GESTIONE VIDEO (Ignora se è un'immagine Base64)
+            // 1. VIDEO MANAGEMENT (Ignore if it's a Base64 image)
             const imgIndex = msgStr.indexOf('/9j/');
             if (imgIndex !== -1 && msgStr.length > 500) {
                 const pureBase64 = msgStr.substring(imgIndex);
@@ -78,13 +100,13 @@ const GCS = (() => {
                 return; 
             }
 
-            // 2. GESTIONE LOG (Evitiamo lo spam della telemetria!)
-            // Se la stringa NON contiene i marcatori della telemetria, allora stampala nel log
+            // 2. LOG MANAGEMENT (Avoid telemetry spam!)
+            // If the string does NOT contain telemetry markers, then print it in the log
             if (!msgStr.includes('ALT:') && !msgStr.includes('BAT:') && !msgStr.includes('SPD:')) {
                 log(msgStr);
             }
 
-            // 3. AGGIORNAMENTO STATO E HUD (Questo avviene sempre)
+            // 3. STATUS AND HUD UPDATE (This always happens)
             if (msgStr.includes('[SYSTEM] Connected!')) setStatus(true);
             if (msgStr.includes('[ERROR]') || msgStr.includes('[CRITICAL ERROR]')) setStatus(false);
             
@@ -92,19 +114,19 @@ const GCS = (() => {
         };
 
         ws.onclose = () => {
-            log('<span style="color:var(--red)">[WS] Connessione WebSocket chiusa.</span>');
+            log('<span style="color:var(--red)">[WS] WebSocket connection closed.</span>');
             setStatus(false);
             ws = null;
         };
 
         ws.onerror = () => {
-            log('<span style="color:var(--red)">[WS] Impossibile raggiungere il gateway (localhost:8000).</span>');
+            log('<span style="color:var(--red)">[WS] Unable to reach the gateway (localhost:8000).</span>');
         };
     }
 
     function send(obj) {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            alert('Connessione non attiva. Vai alla pagina Collegamento e riconnetti.');
+            alert('Connection not active. Go to the Connection page and reconnect.');
             return false;
         }
         ws.send(JSON.stringify(obj));
@@ -158,7 +180,7 @@ const GCS = (() => {
         const raw = sessionStorage.getItem('gcs_conn');
         const params = raw ? JSON.parse(raw) : {};
         send({ action: 'connect', ...params, topic: t.value });
-        log(`<span style="color:var(--amber)">[SYS] Cambio topic → ${t.value}</span>`);
+        log(`<span style="color:var(--amber)">[SYS] Topic changed → ${t.value}</span>`);
     }
 
     function init(opts = {}) {
@@ -180,12 +202,13 @@ const GCS = (() => {
         }
     }
 
-    return { init, connect, send, sendCommand, toggleTelemetry, updateDynamicSubscription, quickSwitchProfile };
+    // Exposed 'clearTerminal' and 'log' to be usable outside
+    return { init, connect, send, sendCommand, toggleTelemetry, updateDynamicSubscription, quickSwitchProfile, clearTerminal, log };
 })();
 
 
 /* ============================================================
-   LOGICA DELLA PAGINA (SPA Tabs, Mappa, Volo)
+   PAGE LOGIC (SPA Tabs, Map, Flight)
    ============================================================ */
 
 function switchTab(tabId, event) {
@@ -197,15 +220,15 @@ function switchTab(tabId, event) {
     document.getElementById(tabId).classList.add('active');
     if (event) event.currentTarget.classList.add('active');
     
-    // Rimosso il map.invalidateSize() di Leaflet poiché la mappa ora è un iframe
+    // Removed Leaflet's map.invalidateSize() since the map is now an iframe
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     GCS.init({ autoReconnect: true });
     
     // ============================================================
-    // [DEPRECATO] VECCHIO CODICE MAPPA JAVASCRIPT
-    // Mantenuto commentato per non perdere la logica in caso di necessità
+    // [DEPRECATED] OLD JAVASCRIPT MAP CODE
+    // Kept commented to avoid losing the logic if needed
     // ============================================================
     /*
     let map;
@@ -252,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================
-// COMANDI DI VOLO E GESTIONE MQTT
+// FLIGHT COMMANDS AND MQTT MANAGEMENT
 // ==========================================
 function doConnect() {
     const params = {
@@ -278,17 +301,40 @@ function sendWaypoint() {
     const lat = document.getElementById('wp_lat').value;
     const lon = document.getElementById('wp_lon').value;
     const alt = document.getElementById('wp_alt').value;
-    if (!lat || !lon || !alt) { alert('Inserisci lat, lon e quota.'); return; }
+    if (!lat || !lon || !alt) { alert('Please enter lat, lon, and altitude.'); return; }
     GCS.sendCommand(`goto ${lat} ${lon} ${alt}`);
 }
 
 function takePhoto() {
+    // Send command to drone (kept for backend sync if necessary)
     GCS.sendCommand('photo');
+    
+    // Visual flash effect on the interface
     const feed = document.getElementById('video-feed');
     feed.style.filter = 'brightness(3)';
     setTimeout(() => feed.style.filter = '', 120);
+
+    // Save current frame locally
+    const videoImg = document.getElementById('live-video');
+    if (videoImg && videoImg.src && videoImg.src.startsWith('data:image')) {
+        // Create an invisible link to trigger the download
+        const a = document.createElement('a');
+        a.href = videoImg.src;
+        
+        // Generate a filename with the current timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.download = `drone_snapshot_${timestamp}.jpg`;
+        
+        document.body.appendChild(a);
+        a.click(); // Trigger download
+        document.body.removeChild(a); // Cleanup
+        
+        GCS.log('<span style="color:var(--green)">[SYS] Snapshot saved locally.</span>');
+    } else {
+        GCS.log('<span style="color:var(--red)">[ERROR] No video feed available to snapshot.</span>');
+    }
 }
 
-// Funzioni di export mantenute come segnaposto se dovessero servire esternamente
-function downloadCSV() { alert('Download CSV in preparazione...'); }
-function downloadZIP() { alert('Download ZIP in preparazione...'); }
+// Export functions kept as placeholders if needed externally
+function downloadCSV() { alert('CSV Download in preparation...'); }
+function downloadZIP() { alert('ZIP Download in preparation...'); }

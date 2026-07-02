@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,25 +25,25 @@
     </div>
     <div class="nav-tabs">
         <a href="#" class="active" onclick="switchTab('conn-tab', event)">
-            <span class="tab-num">01</span> Collegamento
+            <span class="tab-num">01</span> Connection
         </a>
         <a href="#" onclick="switchTab('map-tab', event)">
-            <span class="tab-num">02</span> Mappa & Storico
+            <span class="tab-num">02</span> Map & History
         </a>
         <a href="#" onclick="switchTab('fly-tab', event)">
-            <span class="tab-num">03</span> Plancia di Volo
+            <span class="tab-num">03</span> Flight Deck
         </a>
     </div>
     <div class="nav-right">
         <div class="quick-conn">
-            <label>Profilo Rapido</label>
+            <label>Quick Profile</label>
             <select id="quick_profile" onchange="GCS.quickSwitchProfile(this.value)">
-                <option value="local">Locale (1883)</option>
+                <option value="local">Local (1883)</option>
                 <option value="cloud">Cloud Uni (8883)</option>
             </select>
         </div>
         <button class="btn btn-ghost" style="font-size:11px; padding:5px 10px;" onclick="GCS.toggleTelemetry()">
-            Log MQTT
+            MQTT Log
         </button>
     </div>
 </nav>
@@ -55,26 +55,26 @@
             <div class="card-header">
                 <div class="card-logo" style="font-family: var(--font-mono); font-weight: bold;">AD</div>
                 <div class="card-title">Agri Drones GCS</div>
-                <div class="card-subtitle">Configurazione connessione broker MQTT</div>
+                <div class="card-subtitle">MQTT broker connection configuration</div>
             </div>
 
             <div class="gap-form">
                 <div class="form-group">
-                    <label>Indirizzo Broker / IP</label>
+                    <label>Broker Address / IP</label>
                     <input type="text" id="broker" value="localhost" required>
                 </div>
 
                 <div class="form-group">
-                    <label>Tipo di Collegamento</label>
+                    <label>Connection Type</label>
                     <select id="connection_type">
-                        <option value="standard">Locale / Campo (Porta 1883, Testo Chiaro)</option>
-                        <option value="secure">Cloud HiveMQ Università (Porta 8883, TLS/SSL)</option>
+                        <option value="standard">Local / Field (Port 1883, Clear Text)</option>
+                        <option value="secure">University HiveMQ Cloud (Port 8883, TLS/SSL)</option>
                     </select>
                 </div>
 
                 <div class="gap-form-2">
                     <div class="form-group">
-                        <label>Utente</label>
+                        <label>Username</label>
                         <input type="text" id="username" value="admin">
                     </div>
                     <div class="form-group">
@@ -84,12 +84,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Topic Telemetria da Ascoltare</label>
+                    <label>Telemetry Topic to Listen</label>
                     <input type="text" id="topic" value="#">
                 </div>
 
                 <button class="btn btn-primary full-width lg mt-8" onclick="doConnect()">
-                    Stabilisci Collegamento
+                    Establish Connection
                 </button>
             </div>
         </div>
@@ -107,7 +107,7 @@
     <img id="live-video" src="" style="width: 100%; height: 100%; object-fit: cover; display: none; z-index: 0; position: absolute;" />
     
     <div class="scan-line"></div>
-    <span id="offline-text" style="font-size:12px; color:var(--text-muted); z-index:1; position:relative; text-transform: uppercase;">Feed Camera Offline</span>
+    <span id="offline-text" style="font-size:12px; color:var(--text-muted); z-index:1; position:relative; text-transform: uppercase;">Camera Feed Offline</span>
     
     <div class="corner tl"></div><div class="corner tr"></div>
     <div class="corner bl"></div><div class="corner br"></div>
@@ -117,69 +117,71 @@
         <span class="hud-badge" id="hud-alt">ALT: — m</span>
         <span class="hud-badge" id="hud-speed">SPD: — km/h</span>
         <span class="hud-badge amber" id="hud-bat">BAT: —%</span>
+        
+        <span class="hud-badge" id="hud-gps" style="background: rgba(0,194,255,0.2); color: #00c2ff; border-color: rgba(0,194,255,0.4);">GPS: — , —</span>
     </div>
     
     <div class="video-reticle"></div>
     </div>
-                <button class="photo-btn" onclick="takePhoto()">Acquisisci Fotografia</button>
+                <button class="photo-btn" onclick="takePhoto()">Capture Photo</button>
             </div>
 
             <div class="fly-right">
 
                 <div class="panel" style="padding:16px;">
-                    <div class="section-label" style="margin-bottom:12px;">Stato Controller</div>
+                    <div class="section-label" style="margin-bottom:12px;">Controller Status</div>
                     <div class="action-row">
-                        <button class="btn btn-primary" style="font-size: 10px;" onclick="cmd('enablevs')">Abilita PC</button>
-                        <button class="btn btn-neutral" style="font-size: 10px;" onclick="cmd('disablevs')">Usa Telecomando</button>
+                        <button class="btn btn-primary" style="font-size: 10px;" onclick="cmd('enablevs')">Enable PC</button>
+                        <button class="btn btn-neutral" style="font-size: 10px;" onclick="cmd('disablevs')">Use RC</button>
                         <button class="btn btn-neutral" style="font-size: 10px;" onclick="cmd('i')">Ping</button>
                     </div>
                 </div>
 
                 <div class="panel" style="padding:16px;">
-                    <div class="section-label" style="margin-bottom:12px;">Controllo Volo</div>
+                    <div class="section-label" style="margin-bottom:12px;">Flight Control</div>
                     <div class="action-row" style="margin-bottom:8px;">
-                        <button class="btn btn-success" onclick="cmd('takeoff')">Decollo</button>
-                        <button class="btn btn-neutral" onclick="cmd('land')">Atterra</button>
+                        <button class="btn btn-success" onclick="cmd('takeoff')">Takeoff</button>
+                        <button class="btn btn-neutral" onclick="cmd('land')">Land</button>
                         <button class="btn btn-neutral" onclick="cmd('stop')">Hover</button>
                     </div>
-                    <button class="btn btn-danger stop-btn" onclick="cmd('stop')">STOP EMERGENZA</button>
+                    <button class="btn btn-danger stop-btn" onclick="cmd('stop')">EMERGENCY STOP</button>
                 </div>
 
                 <div class="panel" style="padding:16px;">
-                    <div class="section-label" style="margin-bottom:12px;">Pilotaggio Manuale</div>
+                    <div class="section-label" style="margin-bottom:12px;">Manual Control</div>
 
                     <div class="slider-block" style="margin-bottom:14px;">
                         <div class="slider-row">
-                            <label>Durata impulso (ms) <span id="time_val">1000</span></label>
+                            <label>Pulse duration (ms) <span id="time_val">1000</span></label>
                             <input type="range" id="cmd_time" min="100" max="5000" step="100" value="1000" oninput="document.getElementById('time_val').textContent = this.value">
                         </div>
                         <div class="slider-row">
-                            <label>Potenza / Angolazione <span id="power_val">0.5</span></label>
+                            <label>Power / Angle <span id="power_val">0.5</span></label>
                             <input type="range" id="cmd_power" min="0.1" max="1.0" step="0.1" value="0.5" oninput="document.getElementById('power_val').textContent = parseFloat(this.value).toFixed(1)">
                         </div>
                     </div>
 
                     <div class="joystick-wrapper">
-                        <div class="joy-btn" onclick="manual('rotateleft')" title="Ruota SX">⟲</div>
-                        <div class="joy-btn" onclick="manual('forward')" title="Avanti">▲</div>
-                        <div class="joy-btn" onclick="manual('rotateright')" title="Ruota DX">⟳</div>
-                        <div class="joy-btn" onclick="manual('left')" title="Sinistra">◀</div>
+                        <div class="joy-btn" onclick="manual('rotateleft')" title="Rotate Left">⟲</div>
+                        <div class="joy-btn" onclick="manual('forward')" title="Forward">▲</div>
+                        <div class="joy-btn" onclick="manual('rotateright')" title="Rotate Right">⟳</div>
+                        <div class="joy-btn" onclick="manual('left')" title="Left">◀</div>
                         <div class="joy-center"></div>
-                        <div class="joy-btn" onclick="manual('right')" title="Destra">▶</div>
-                        <div class="joy-btn" onclick="manual('up')" title="Sali">⇑</div>
-                        <div class="joy-btn" onclick="manual('backward')" title="Indietro">▼</div>
-                        <div class="joy-btn" onclick="manual('down')" title="Scendi">⇓</div>
+                        <div class="joy-btn" onclick="manual('right')" title="Right">▶</div>
+                        <div class="joy-btn" onclick="manual('up')" title="Up">⇑</div>
+                        <div class="joy-btn" onclick="manual('backward')" title="Backward">▼</div>
+                        <div class="joy-btn" onclick="manual('down')" title="Down">⇓</div>
                     </div>
                 </div>
 
                 <div class="panel" style="padding:16px;">
-                    <div class="section-label" style="margin-bottom:12px;">Navigazione Automatica (Waypoint)</div>
+                    <div class="section-label" style="margin-bottom:12px;">Automatic Navigation (Waypoint)</div>
                     <div class="wp-grid">
-                        <div class="form-group"><label>Latitudine</label><input type="number" id="wp_lat" placeholder="45.4320" step="any"></div>
-                        <div class="form-group"><label>Longitudine</label><input type="number" id="wp_lon" placeholder="10.9120" step="any"></div>
-                        <div class="form-group full-width"><label>Quota Volo (m)</label><input type="number" id="wp_alt" placeholder="30"></div>
+                        <div class="form-group"><label>Latitude</label><input type="number" id="wp_lat" placeholder="45.4320" step="any"></div>
+                        <div class="form-group"><label>Longitude</label><input type="number" id="wp_lon" placeholder="10.9120" step="any"></div>
+                        <div class="form-group full-width"><label>Flight Altitude (m)</label><input type="number" id="wp_alt" placeholder="30"></div>
                     </div>
-                    <button class="btn btn-primary full-width mt-8" onclick="sendWaypoint()">Lancia su Coordinate</button>
+                    <button class="btn btn-primary full-width mt-8" onclick="sendWaypoint()">Go to Coordinates</button>
                 </div>
 
             </div>
@@ -188,25 +190,27 @@
 </div>
 
 <div id="telemetry-drawer">
-    <div class="drawer-header">
-        <h3>Log Monitor MQTT</h3>
-        <button onclick="GCS.toggleTelemetry()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">✕</button>
+    <div class="drawer-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>MQTT Log Monitor</h3>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <button class="btn btn-ghost" onclick="GCS.clearTerminal()" style="padding:4px 8px; font-size:11px; border: 1px solid var(--border);">Clear Log</button>
+            <button onclick="GCS.toggleTelemetry()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">✕</button>
+        </div>
     </div>
     <div class="drawer-topic-bar">
-        <input type="text" id="dynamic_topic" value="#" placeholder="Topic da ascoltare…">
-        <button class="btn btn-ghost" onclick="GCS.updateDynamicSubscription()" style="padding:6px 10px;font-size:11px;">Iscriviti</button>
+        <input type="text" id="dynamic_topic" value="#" placeholder="Topic to listen to…">
+        <button class="btn btn-ghost" onclick="GCS.updateDynamicSubscription()" style="padding:6px 10px;font-size:11px;">Subscribe</button>
     </div>
-    <div id="terminal">In attesa della connessione…</div>
+    <div id="terminal">Waiting for connection…</div>
 </div>
 
 <footer class="footer">
     <div class="status-pill">
         <span class="status-dot offline"></span>
-        <span class="status-text" style="color:var(--red)">OFFLINE — Disconnesso</span>
+        <span class="status-text" style="color:var(--red)">OFFLINE — Disconnected</span>
     </div>
     <div class="text-muted mono">Agri Drones · Alessandro Mercede</div>
 </footer>
-
- <script src="js/collegamento.js"></script>
+<script src="js/collegamento.js"></script>
 </body>
 </html>
